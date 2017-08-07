@@ -31,7 +31,7 @@ ids = [int(numeric_string) for numeric_string in ids[:ids.find(' ')].splitlines(
 
 #Retrieve the abstracts for all article ids obtained above
 getRecordURL = 'https://www.ncbi.nlm.nih.gov/pmc/oai/oai.cgi'
-abstracts = []
+abstracts = ''
 for currentID in ids:
     identifier = 'oai:pubmedcentral.nih.gov:%d' % currentID
     getRecordResponse = unirest.get(
@@ -42,13 +42,15 @@ for currentID in ids:
             'metadataPrefix' : 'pmc'
         }
     )
-    print getRecordResponse.code
     #fish the abstract out of the slop of xml returned by the API
     #and append it to the abstracts array
-    xml = BeautifulSoup(getRecordResponse.body , 'lxml')
-    print xml
-    abstract = xml.find_all('abstract')
-    abstract = abstract.get_text()
-    abstracts.append(abstract)
+    try:
+        abstracts.append(BeautifulSoup(getRecordResponse.body , 'lxml').find('title').get_text())
+        abstracts.append(BeautifulSoup(getRecordResponse.body , 'lxml').find('abstract').get_text())
+        print 'Article %d retreived' % currentID
+    except:
+        #catches any API response without an abstract
+        print "Uh oh! GETting article %d didn't work" % currentID
+        print getRecordResponse.body
 
-    print abstract + '\n\n'
+#
