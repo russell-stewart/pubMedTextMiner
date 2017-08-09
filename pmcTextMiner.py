@@ -2,11 +2,14 @@ from bs4 import BeautifulSoup
 import unirest
 import lxml
 import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
 import getopt
 import os
 from PIL import Image
 from wordcloud import WordCloud
-import xlswriter
+from xlsxwriter import Workbook
+# -*- coding: utf-8-*-
 
 #Default parameters
 #It might be useful to update nerPath and threads, and email for your machine,
@@ -137,7 +140,7 @@ returncode = os.system(command)
 #after pipeline finishes, import the Neji results and xml parse them.
 #(I chose XML because I already had to import XML parsers to deal with PubMed.)
 print '\nNER done! Importing results...'
-annotatedAbstracts = BeautifulSoup(open(ofilepath + '/abstracts.xml' , 'r').read() , 'lxml')
+annotatedAbstracts = BeautifulSoup(open(ofilepath + '/abstracts.xml' , 'r').read().encode('UTF-8') , 'lxml')
 
 #iterate over every named entity in every sentence, and parse the tag from
 #the id. see if the tag exists in the tags database, add the entity to that Tag.
@@ -164,19 +167,28 @@ for sentence in annotatedAbstracts.find_all('s'):
             tags.append(Tag(classification , annotation.get_text()))
 
 #generate word clouds and output text file
+
 print 'Writing output files...'
-otextfile = open((ofilepath + '/' + query + '_' + 'results.txt') , 'w')
+ofile = Workbook((ofilepath + '/' + query + '_' + 'results.xlsx'))
 for tag in tags:
-    otextfile.write(tag.toString().encode('UTF-8'))
-    image = WordCloud().generate(tag.EntityString()).to_image()
     if tag.classification == 'PRGE':
         tag.classification = 'genes'
     elif tag.classification == 'ANAT':
         tag.classification = 'anatomy'
     elif tag.classification == 'DISO':
         tag.classification = 'disorders'
+    worksheet = ofile.add_worksheet(tag.classification.encode('UTF-8'))
+    worksheet.write_string(0 , 0 , 'Named Entity')
+    worksheet.write_string(0 , 1 , 'Occurances')
+    i = 0
+    tag.sort()
+    for entity in tag.entities:
+        worksheet.write_string(i , 0 , entity.text.encode('UTF-8'))
+        worksheet.write_number(i , 1 , entity.occurances)
+        i += 1
+    image = WordCloud().generate(tag.EntityString()).to_image()
     image.save(ofilepath + '/' + query + '_' + tag.classification + '.bmp')
-otextfile.close()
+ofile.close()
 
 
 print 'Cleaning up...'
