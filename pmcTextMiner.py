@@ -4,16 +4,61 @@ import lxml
 import sys
 import getopt
 import os
-
-#Get parameters from program call
-opts = getopt.getopt(sys.argv[1:] , '' , ['query=' , 'ofilepath=' , 'email=' , 'nerPath=' , 'threads='])
+from PIL import Image
+from wordcloud import WordCloud
+import xlswriter
 
 #Default parameters
+#It might be useful to update nerPath and threads, and email for your machine,
+#as these likely won't change every time you run the script.
 nerPath = '/Users/russellstewart/Documents/NationalJewish/Seibold/neji'
 threads = 4
 ofilepath = '/Users/russellstewart/Documents/NationalJewish/Seibold/pmctextminer/results'
 query = 'PTPRA'
 email = 'russells98@gmail.com'
+
+#stores freqencies of all NamedEntities associated with one tag
+class Tag:
+    def __init__(self , classification , firstEntity):
+        self.classification = classification
+        self.entities = [NamedEntity(firstEntity)]
+    def add(self , new):
+        found = False
+        for entity in self.entities:
+            if new == entity.text:
+                entity.increment()
+                found = True
+        if not found:
+            self.entities.append(NamedEntity(new))
+    def toString(self):
+        self.sort()
+        string = u'Classification: %s\n' % self.classification
+        for entity in self.entities:
+            string += '  %s\n' % entity.toString()
+        string += '\n'
+        return string
+    def sort(self):
+        self.entities.sort(key = lambda x: x.occurances , reverse = True)
+    def EntityString(self):
+        string = u''
+        for entity in self.entities:
+            for i in range(0 , len(self.entities)):
+                string += entity.text + ' '
+        return string
+
+#stores a named entity's text and its number of occurances
+class NamedEntity:
+    def __init__(self , text):
+        self.text = text
+        self.occurances = 1
+    def increment(self):
+        self.occurances += 1
+    def toString(self):
+        return '%s: %d' % (self.text , self.occurances)
+
+
+#Get parameters from program call
+opts = getopt.getopt(sys.argv[1:] , '' , ['query=' , 'ofilepath=' , 'email=' , 'nerPath=' , 'threads='])
 
 for opt , arg in opts[0]:
     if opt == '--query':
@@ -86,10 +131,54 @@ print 'Running NER on abstracts...'
 
 os.chdir(nerPath)
 command = '%s/neji.sh -i %s -o %s -d %s/resources/dictionaries -m %s/resources/models -t %d -if RAW -of XML' %(nerPath , ofilepath , ofilepath , nerPath , nerPath , threads)
-print '  ' + command + '\n'
+print '\n' + command + '\n'
 returncode = os.system(command)
 
 #after pipeline finishes, import the Neji results and xml parse them.
 #(I chose XML because I already had to import XML parsers to deal with PubMed.)
-print 'NER done! Importing results...'
+print '\nNER done! Importing results...'
 annotatedAbstracts = BeautifulSoup(open(ofilepath + '/abstracts.xml' , 'r').read() , 'lxml')
+
+#iterate over every named entity in every sentence, and parse the tag from
+#the id. see if the tag exists in the tags database, add the entity to that Tag.
+#if the tag is not found, create a new Tag in tags
+tags = []
+for sentence in annotatedAbstracts.find_all('s'):
+    for annotation in sentence.find_all('e'):
+        classification = annotation['id']
+        i = 0
+        while i < len(classification):
+            if classification[i] == ':':
+                classification = classification[(i + 1):]
+                i = -1
+            if classification[i] == '|' or classification[i] == ')':
+                classification = classification[:i]
+                i = len(classification)
+            i+= 1
+        found = False
+        for currentTag in tags:
+            if currentTag.classification == classification:
+                currentTag.add(annotation.get_text())
+                found = True
+        if not found:
+            tags.append(Tag(classification , annotation.get_text()))
+
+#generate word clouds and output text file
+print 'Writing output files...'
+otextfile = open((ofilepath + '/' + query + '_' + 'results.txt') , 'w')
+for tag in tags:
+    otextfile.write(tag.toString().encode('UTF-8'))
+    image = WordCloud().generate(tag.EntityString()).to_image()
+    if tag.classification == 'PRGE':
+        tag.classification = 'genes'
+    elif tag.classification == 'ANAT':
+        tag.classification = 'anatomy'
+    elif tag.classification == 'DISO':
+        tag.classification = 'disorders'
+    image.save(ofilepath + '/' + query + '_' + tag.classification + '.bmp')
+otextfile.close()
+
+
+print 'Cleaning up...'
+os.remove(ofilepath + '/' + 'abstracts.txt')
+os.remove(ofilepath + '/' + 'abstracts.xml')
