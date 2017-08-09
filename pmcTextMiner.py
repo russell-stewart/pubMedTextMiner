@@ -3,7 +3,6 @@ import unirest
 import lxml
 import sys
 import getopt
-import subprocess
 import os
 
 #Get parameters from program call
@@ -63,7 +62,9 @@ for currentID in ids[1:]:
     #fish the abstract out of the slop of xml returned by the API
     #and append it to the abstracts array
     try:
-        abstracts += BeautifulSoup(getRecordResponse.body , 'lxml').find('abstract').get_text().strip()
+        results = BeautifulSoup(getRecordResponse.body , 'lxml').find_all('abstract')
+        for abstract in results:
+            abstracts += abstract.get_text().strip()
         success += 1
     except:
         #catches any API response without an abstract
@@ -84,12 +85,11 @@ abstractFile.close()
 print 'Running NER on abstracts...'
 
 os.chdir(nerPath)
-print os.listdir('./')
-command = './neji.sh -i %s -o %s -d ./resources/dictionaries -m ./resources/models -t %d -if RAW -of XML' %(ofilepath , ofilepath , threads)
-print '  ' + command
-returncode = subprocess.call(command)
+command = '%s/neji.sh -i %s -o %s -d %s/resources/dictionaries -m %s/resources/models -t %d -if RAW -of XML' %(nerPath , ofilepath , ofilepath , nerPath , nerPath , threads)
+print '  ' + command + '\n'
+returncode = os.system(command)
 
 #after pipeline finishes, import the Neji results and xml parse them.
 #(I chose XML because I already had to import XML parsers to deal with PubMed.)
 print 'NER done! Importing results...'
-annotatedAbstracts = BeautifulSoup(open(ofilepath + '/results.xml' , 'r').read() , 'lxml')
+annotatedAbstracts = BeautifulSoup(open(ofilepath + '/abstracts.xml' , 'r').read() , 'lxml')
