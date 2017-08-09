@@ -1,3 +1,38 @@
+#pmcTextMiner.py
+#Russell O. Stewart
+#8/9/2017
+#A text miner for PubMed
+#Mines PubMed's API for a query (eg. a couple of gene names, proteins, etc...)
+#runs the resulting abstracts through Neji (a biomedical named entity
+#recognizer), tallies the named entities into an .xlsx file, and creates pretty
+#word clouds for found genes, anatomy features, and disorders/diseases.
+#
+#Usage:
+#python pmcTextMiner.py --query --ofilepath [--email] [--nerPath] [--threads]
+#--query: the query string to search in PubMed.
+#--ofilepath: the directory to output results to. Mac users: don't use ~/
+#--email: optional (if not given, uses value specified in this file).
+#   email required for PubMed API access (idk why). Probably a good idea to
+#   update this for your machine.
+#--nerPath: optional (if not given, uses value specified in this file).
+#   the path to Neji. Probably a good idea to update this for your machine.
+#--threads: optional (if not given, uses value specified in this file).
+#   the number of threads available for your task. more threads will speed up Neji named entity recognition.
+#
+#Dependencies
+#
+#Non-standard Python packages (all available from pip):
+#BeautifulSoup: xml parsing
+#unirest: api handling
+#lxml: xml parsing (required by BeautifulSoup)
+#wordcloud: for word cloud output
+#xlsxwriter: for xlsx output
+#
+#Other Programs
+#Neji: biomedical named entity recognition. For documentation and download, see:
+#https://github.com/BMDSoftware/neji
+
+
 from bs4 import BeautifulSoup
 import unirest
 import lxml
@@ -16,8 +51,6 @@ from xlsxwriter import Workbook
 #as these likely won't change every time you run the script.
 nerPath = '/Users/russellstewart/Documents/NationalJewish/Seibold/neji'
 threads = 4
-ofilepath = '/Users/russellstewart/Documents/NationalJewish/Seibold/pmctextminer/results'
-query = 'PTPRA'
 email = 'russells98@gmail.com'
 
 #stores freqencies of all NamedEntities associated with one tag
@@ -63,6 +96,8 @@ class NamedEntity:
 #Get parameters from program call
 opts = getopt.getopt(sys.argv[1:] , '' , ['query=' , 'ofilepath=' , 'email=' , 'nerPath=' , 'threads='])
 
+query = None
+ofilepath = None
 for opt , arg in opts[0]:
     if opt == '--query':
         query = arg
@@ -74,6 +109,8 @@ for opt , arg in opts[0]:
         nerPath = arg
     if opt == '--threads':
         threads = arg
+if query == None or ofilepath == None:
+    raise Exception('Remember to specify --query and --ofilepath!!!!')
 
 #Search PubMed (w/ user specifed query) and extract all resulting article IDs
 print 'Finding relevant articles on PubMed...'
@@ -166,8 +203,7 @@ for sentence in annotatedAbstracts.find_all('s'):
         if not found:
             tags.append(Tag(classification , annotation.get_text()))
 
-#generate word clouds and output text file
-
+#generate word clouds and output .xlsx file
 print 'Writing output files...'
 ofile = Workbook((ofilepath + '/' + query + '_' + 'results.xlsx'))
 for tag in tags:
@@ -176,7 +212,7 @@ for tag in tags:
     elif tag.classification == 'ANAT':
         tag.classification = 'anatomy'
     elif tag.classification == 'DISO':
-        tag.classification = 'disorders'
+        tag.classification = 'diseases'
     worksheet = ofile.add_worksheet(tag.classification.encode('UTF-8'))
     worksheet.write_string(0 , 0 , 'Named Entity')
     worksheet.write_string(0 , 1 , 'Occurances')
@@ -190,7 +226,7 @@ for tag in tags:
     image.save(ofilepath + '/' + query + '_' + tag.classification + '.bmp')
 ofile.close()
 
-
+#delete the temporary abstracts files used for communication with neji
 print 'Cleaning up...'
 os.remove(ofilepath + '/' + 'abstracts.txt')
 os.remove(ofilepath + '/' + 'abstracts.xml')
