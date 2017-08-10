@@ -8,7 +8,7 @@
 #word clouds for found genes, anatomy features, and disorders/diseases.
 #
 #Usage:
-#python pmcTextMiner.py --query <string> --ofilepath <path>  [--mineBodies] [--email <string>] [--nerPath <path>] [--threads <int>]
+#python pmcTextMiner.py --query <string> --ofilepath <path>  [--mineBodies] [--retmax <int>] [--email <string>] [--nerPath <path>] [--threads <int>]
 #--query: the query string to search in PubMed.
 #--ofilepath: the directory to output results to. Mac users: don't use ~/
 #--email: optional (if not given, uses value specified in this file).
@@ -20,6 +20,7 @@
 #   the number of threads available for your task. more threads will speed up Neji named entity recognition.
 #--mineBodies: optional. if specified, program will mine pmc for full articles,
 #   instead of just mining PubMed for abstracts.
+#--retmax: optional, default is 20 (PubMed API's standard). number of articles to mine.
 #
 #Dependencies
 #
@@ -96,11 +97,12 @@ class NamedEntity:
 
 
 #Get parameters from program call
-opts = getopt.getopt(sys.argv[1:] , '' , ['query=' , 'ofilepath=' , 'email=' , 'nerPath=' , 'threads=' , 'mineBodies'])
+opts = getopt.getopt(sys.argv[1:] , '' , ['query=' , 'ofilepath=' , 'email=' , 'nerPath=' , 'threads=' , 'mineBodies' , 'retmax='])
 
 query = None
 ofilepath = None
 db = 'pubmed'
+retmax = 20
 for opt , arg in opts[0]:
     if opt == '--query':
         query = arg
@@ -114,6 +116,8 @@ for opt , arg in opts[0]:
         threads = arg
     if opt == '--mineBodies':
         db = 'pmc'
+    if opt == '--retmax':
+        retmax = arg
 if query == None or ofilepath == None:
     raise Exception('Remember to specify --query and --ofilepath!!!!')
 
@@ -126,7 +130,8 @@ searchResponse = unirest.get(
         'db' : db,
         'term' : query,
         'tool' : 'pmcTextMiner',
-        'email' : email
+        'email' : email,
+        'retmax' : retmax
     }
 )
 ids = BeautifulSoup(searchResponse.body , 'lxml').find_all('id')
