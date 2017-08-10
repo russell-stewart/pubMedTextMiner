@@ -8,7 +8,7 @@
 #word clouds for found genes, anatomy features, and disorders/diseases.
 #
 #Usage:
-#python pmcTextMiner.py --query --ofilepath [--email] [--nerPath] [--threads]
+#python pmcTextMiner.py --query <string> --ofilepath <path>  [--mineBodies] [--email <string>] [--nerPath <path>] [--threads <int>]
 #--query: the query string to search in PubMed.
 #--ofilepath: the directory to output results to. Mac users: don't use ~/
 #--email: optional (if not given, uses value specified in this file).
@@ -18,6 +18,8 @@
 #   the path to Neji. Probably a good idea to update this for your machine.
 #--threads: optional (if not given, uses value specified in this file).
 #   the number of threads available for your task. more threads will speed up Neji named entity recognition.
+#--mineBodies: optional. if specified, program will mine pmc for full articles,
+#   instead of just mining PubMed for abstracts.
 #
 #Dependencies
 #
@@ -94,10 +96,11 @@ class NamedEntity:
 
 
 #Get parameters from program call
-opts = getopt.getopt(sys.argv[1:] , '' , ['query=' , 'ofilepath=' , 'email=' , 'nerPath=' , 'threads='])
+opts = getopt.getopt(sys.argv[1:] , '' , ['query=' , 'ofilepath=' , 'email=' , 'nerPath=' , 'threads=' , 'mineBodies'])
 
 query = None
 ofilepath = None
+db = 'pubmed'
 for opt , arg in opts[0]:
     if opt == '--query':
         query = arg
@@ -109,6 +112,8 @@ for opt , arg in opts[0]:
         nerPath = arg
     if opt == '--threads':
         threads = arg
+    if opt == '--mineBodies':
+        db = 'pmc'
 if query == None or ofilepath == None:
     raise Exception('Remember to specify --query and --ofilepath!!!!')
 
@@ -118,46 +123,37 @@ searchURL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
 searchResponse = unirest.get(
     searchURL,
     params = {
-        'db' : 'pmc',
+        'db' : db,
         'term' : query,
         'tool' : 'pmcTextMiner',
         'email' : email
     }
 )
-ids = BeautifulSoup(searchResponse.body , 'lxml').get_text()
-ids = [int(numeric_string) for numeric_string in ids[:ids.find(' ')].splitlines()]
+ids = BeautifulSoup(searchResponse.body , 'lxml').find_all('id')
 print '  %d results found.' % len(ids)
+ids = [current.get_text() for current in ids]
+ids = ','.join(ids)
 
 #Retrieve the abstracts for all article ids obtained above
 print 'Retrieving article abstracts...'
-getRecordURL = 'https://www.ncbi.nlm.nih.gov/pmc/oai/oai.cgi'
-abstracts = ''
-success = 0
-fail = 0
-for currentID in ids[1:]:
-    identifier = 'oai:pubmedcentral.nih.gov:%d' % currentID
-    getRecordResponse = unirest.get(
-        getRecordURL,
-        params = {
-            'verb' : 'GetRecord',
-            'identifier' : identifier,
-            'metadataPrefix' : 'pmc'
-        }
-    )
-    #fish the abstract out of the slop of xml returned by the API
-    #and append it to the abstracts array
-    try:
-        results = BeautifulSoup(getRecordResponse.body , 'lxml').find_all('abstract')
-        for abstract in results:
-            abstracts += abstract.get_text().strip()
-        success += 1
-    except:
-        #catches any API response without an abstract
-        fail += 1
+getRecordURL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi'
+getRecordResponse = unirest.get(
+    getRecordURL,
+    params = {
+        'db' : db,
+        'id' : ids,
+        'retmode' : 'xml'
+    }
+)
 
-print '  %d abstracts read successfully.' % success
-if fail:
-    print '  %d could not be read.' % fail
+response = BeautifulSoup(getRecordResponse.body , 'lxml').find_all('abstract')
+abstracts = ''
+for abstract in response:
+    abstracts += abstract.get_text().strip()
+if db == 'pmc':
+    bodies = BeautifulSoup(getRecordResponse.body , 'lxml').find_all('body')
+    for body in bodies:
+        abstracts += body.get_text().strip()
 
 #write abstracts to files for use by the named entity
 #recognition pipeline
