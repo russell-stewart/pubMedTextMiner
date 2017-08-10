@@ -39,4 +39,9 @@ if not helpMenu:
     except ImportError:
         os.system('pip install xlsxwriter')
 
+    try:
+        from PIL import Image
+    except ImportError:
+        os.system('pip install PIL')
+
 print 'All packages ready to go!'
