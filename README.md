@@ -17,7 +17,10 @@ word clouds for found genes, anatomy features, and disorders/diseases.
 
 ## Dependencies
 
-### Non-standard Python packages (all available from pip):
+### Non-standard Python packages:
+
+If don't have any of these packages installed, just run `sudo python packagehelper.py`, and all of the needed packages will be installed using pip!
+
 -beautifulsoup: xml parsing
 -unirest: api handling
 -lxml: xml parsing (required by BeautifulSoup)
