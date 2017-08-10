@@ -8,7 +8,7 @@ word clouds for found genes, anatomy features, and disorders/diseases.
 
 ## Setup:
 1. Clone this repository
-2. Run sudo packagehelper.py
+2. Run `sudo packagehelper.py`
 3. Download and unzip [the latest version of neji](https://github.com/BMDSoftware/neji/releases/download/v2.0.0/neji-2.0.0.zip)
 4. Update nerPath , threads, and email at the top of pmcTextMiner.py (to streamline command line interface)
 5. Refer to Usage!
