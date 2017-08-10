@@ -8,7 +8,7 @@ word clouds for found genes, anatomy features, and disorders/diseases.
 
 ## Setup:
 1. Clone this repository
-2. Run sudo packagehelper.py
+2. Run `sudo packagehelper.py`
 3. Download and unzip [the latest version of neji](https://github.com/BMDSoftware/neji/releases/download/v2.0.0/neji-2.0.0.zip)
 4. Update nerPath , threads, and email at the top of pmcTextMiner.py (to streamline command line interface)
 5. Refer to Usage!
@@ -29,11 +29,11 @@ word clouds for found genes, anatomy features, and disorders/diseases.
 
 If don't have any of these packages installed, just run `sudo python packagehelper.py`, and all of the needed packages will be installed using pip!
 
--beautifulsoup: xml parsing
--unirest: api handling
--lxml: xml parsing (required by BeautifulSoup)
--wordcloud: for word cloud output
--xlsxwriter: for xlsx output
+- beautifulsoup: xml parsing
+- unirest: api handling
+- lxml: xml parsing (required by BeautifulSoup)
+- wordcloud: for word cloud output
+- xlsxwriter: for xlsx output
 
 ### Other Programs
 -Neji: biomedical named entity recognition. For documentation and download, see [https://github.com/BMDSoftware/neji]
