@@ -35,18 +35,20 @@
 #Neji: biomedical named entity recognition. For documentation and download, see:
 #https://github.com/BMDSoftware/neji
 
-
-from bs4 import BeautifulSoup
-import unirest
-import lxml
-import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
-import getopt
-import os
-from PIL import Image
-from wordcloud import WordCloud
-from xlsxwriter import Workbook
+try:
+    from bs4 import BeautifulSoup
+    import unirest
+    import lxml
+    import sys
+    reload(sys)
+    sys.setdefaultencoding('utf8')
+    import getopt
+    import os
+    from PIL import Image
+    from wordcloud import WordCloud
+    from xlsxwriter import Workbook
+except ImportError:
+    raise Exception('Not all packages installed! Please run sudo pip packagehelper.py')
 # -*- coding: utf-8-*-
 
 #Default parameters
