@@ -1,4 +1,4 @@
-# pmcTextMiner
+# pubMedTextMiner
 *A text miner for PubMed abstracts*
 
 Mines PubMed's API for a query (eg. a couple of gene names, proteins, etc...),
