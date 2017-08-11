@@ -158,7 +158,7 @@ abstracts = ''
 for abstract in response:
     abstracts += abstract.get_text().strip()
 if db == 'pmc':
-    bodies = BeautifulSoup(getRecordResponse.body , 'lxml').find_all('body')
+    bodies = BeautifulSoup(getRecordResponse.body , 'lxml').find_all('sec')
     for body in bodies:
         abstracts += body.get_text().strip()
 
